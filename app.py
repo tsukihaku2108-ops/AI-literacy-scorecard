@@ -1,11 +1,7 @@
 import streamlit as st
-import sqlite3, json, uuid
-from datetime import datetime
-from pathlib import Path
 import pandas as pd
 
 st.set_page_config(page_title="AI Literacy Scorecard", page_icon="🧭", layout="wide")
-DB = Path(__file__).with_name("scorecard_records.db")
 
 DOMAINS = [
     "Kỹ năng đặt câu hỏi và khai thác AI",
@@ -67,88 +63,66 @@ DOMAINS[3]: ["Tránh nhập dữ liệu cá nhân không cần thiết; kiểm t
 "Giảm thông tin nhận dạng khi nhập prompt, tôn trọng quyền riêng tư và kiểm tra quy định học tập.",
 "Duy trì nguyên tắc tối thiểu hóa dữ liệu, tôn trọng quyền riêng tư và tuân thủ quy định sử dụng AI."]
 }
-def init_db():
-    with sqlite3.connect(DB) as c:
-        c.execute("""CREATE TABLE IF NOT EXISTS attempts (
-        id TEXT PRIMARY KEY, created TEXT, participant TEXT, class_name TEXT,
-        total INTEGER, score100 REAL, answers TEXT, domains TEXT)""")
-init_db()
+st.set_page_config(page_title="AI Literacy Scorecard", page_icon="🧭", layout="wide")
 
 st.title("🧭 AI Literacy Scorecard")
 st.write("Bộ 12 tình huống thực tế về cách sử dụng AI trong học tập.")
 st.info("Đây là công cụ tự đánh giá thử nghiệm, chưa phải thang đo đã được kiểm định. Hãy chọn phương án gần với cách bạn thực sự sẽ làm.")
-with st.expander("Thông tin hồ sơ (không bắt buộc)", expanded=True):
-    participant = st.text_input("Mã người tham gia / tên hiển thị", placeholder="Ví dụ: HS011")
-    class_name = st.text_input("Lớp/nhóm", placeholder="Ví dụ: 11A")
-    st.caption("Nên dùng mã thay cho họ tên đầy đủ. Hồ sơ được lưu trong cơ sở dữ liệu cục bộ của ứng dụng.")
+
 with st.form("quiz"):
     choices = []
-    for i,(situation, options, domain_idx) in enumerate(Q):
-        st.subheader(f"Câu {i+1} · {DOMAINS[domain_idx]}")
+    for i, (situation, options, domain_idx) in enumerate(Q):
+        st.subheader(f"Câu {i + 1} · {DOMAINS[domain_idx]}")
         st.write(situation)
-        choices.append(st.radio("Chọn một phương án:", [f"{o[0]}. {o[1]}" for o in options], key=f"q{i}", index=None))
+        choices.append(st.radio(
+            "Chọn một phương án:",
+            [f"{o[0]}. {o[1]}" for o in options],
+            key=f"q{i}",
+            index=None,
+        ))
         st.divider()
     go = st.form_submit_button("Chấm điểm và xem lời khuyên", type="primary", use_container_width=True)
 
 if go:
-    if any(x is None for x in choices):
+    if any(choice is None for choice in choices):
         st.error("Bạn cần trả lời đủ 12 tình huống trước khi chấm điểm.")
     else:
-        detail, answers, scores = [], [], {d:0 for d in DOMAINS}
-        for i, ((situation, options, di), chosen) in enumerate(zip(Q, choices)):
-            option = next(o for o in options if chosen.startswith(o[0]+"."))
+        scores = {domain: 0 for domain in DOMAINS}
+        detail = []
+        for i, ((situation, options, domain_idx), chosen) in enumerate(zip(Q, choices)):
+            option = next(option for option in options if chosen.startswith(option[0] + "."))
             letter, label, score = option
-            domain = DOMAINS[di]
+            domain = DOMAINS[domain_idx]
             scores[domain] += score
-            detail.append({"Câu":i+1,"Nhóm năng lực":domain,"Lựa chọn":letter,"Điểm":score,"Phương án đã chọn":label})
-            answers.append({"question":i+1,"domain":domain,"choice":letter,"answer":label,"score":score})
-        total = sum(scores.values())
-        attempt = uuid.uuid4().hex[:8].upper()
-        created = datetime.now().isoformat(timespec="seconds")
-        with sqlite3.connect(DB) as c:
-            c.execute("INSERT INTO attempts VALUES (?,?,?,?,?,?,?,?)",
-                      (attempt,created,participant.strip(),class_name.strip(),total,round(total/36*100,1),
-                       json.dumps(answers,ensure_ascii=False),json.dumps(scores,ensure_ascii=False)))
-        st.session_state["result"] = {"id":attempt,"created":created,"participant":participant,"class_name":class_name,
-                                      "total":total,"scores":scores,"answers":answers,"detail":detail}
+            detail.append({"Câu": i + 1, "Nhóm năng lực": domain, "Lựa chọn": letter, "Điểm": score})
+        st.session_state["result"] = {"scores": scores, "total": sum(scores.values()), "detail": detail}
 
 if "result" in st.session_state:
-    r = st.session_state["result"]
+    result = st.session_state["result"]
     st.header("Kết quả của bạn")
-    st.caption(f"Mã hồ sơ: {r['id']} · {r['created']}")
-    a,b = st.columns(2)
-    a.metric("Tổng điểm",f"{r['total']}/36")
-    b.metric("Điểm quy đổi",f"{r['total']/36*100:.1f}/100")
-    st.caption("Điểm quy đổi = tổng điểm / 36 × 100. Đây là chỉ số mô tả kết quả trong bộ tình huống.")
-    domain_df = pd.DataFrame([{"Nhóm năng lực":d,"Điểm":v,"Tối đa":9,"Quy đổi (%)":round(v/9*100,1)} for d,v in r["scores"].items()])
+    col1, col2 = st.columns(2)
+    col1.metric("Tổng điểm", f"{result['total']}/36")
+    col2.metric("Điểm quy đổi", f"{result['total'] / 36 * 100:.1f}/100")
+    st.caption("Điểm quy đổi = tổng điểm / 36 × 100. Chỉ số này mô tả kết quả trong bộ tình huống, không phải đánh giá năng lực đã được kiểm định.")
+
+    domain_df = pd.DataFrame([
+        {"Nhóm năng lực": domain, "Điểm": score, "Tối đa": 9, "Quy đổi (%)": round(score / 9 * 100, 1)}
+        for domain, score in result["scores"].items()
+    ])
     st.subheader("Điểm theo nhóm năng lực")
     st.bar_chart(domain_df.set_index("Nhóm năng lực")["Quy đổi (%)"])
-    st.dataframe(domain_df,use_container_width=True,hide_index=True)
-    st.subheader("Lời khuyên cá nhân hóa")
-    for d,score in r["scores"].items():
+    st.dataframe(domain_df, use_container_width=True, hide_index=True)
+
+    st.subheader("Lời khuyên dựa trên điểm từng nhóm")
+    for domain, score in result["scores"].items():
         band = 0 if score <= 3 else (1 if score <= 6 else 2)
-        with st.expander(f"{d}: {score}/9", expanded=(score <= 3)):
-            st.write(ADVICE[d][band])
-    st.subheader("Hồ sơ bài làm")
-    df = pd.DataFrame(r["detail"])
-    st.dataframe(df[["Câu","Nhóm năng lực","Lựa chọn","Điểm"]],use_container_width=True,hide_index=True)
-    record = {"id":r["id"],"created":r["created"],"participant":r["participant"],"class_name":r["class_name"],
-              "total":r["total"],"max_score":36,"score100":round(r["total"]/36*100,1),
-              "domain_scores":r["scores"],"answers":r["answers"]}
-    st.download_button("Tải hồ sơ chi tiết (JSON)",json.dumps(record,ensure_ascii=False,indent=2),
-                       file_name=f"scorecard_{r['id']}.json",mime="application/json")
-    st.download_button("Tải câu trả lời (CSV)",df.to_csv(index=False).encode("utf-8-sig"),
-                       file_name=f"scorecard_{r['id']}.csv",mime="text/csv")
+        with st.expander(f"{domain}: {score}/9", expanded=(score <= 3)):
+            st.write(ADVICE[domain][band])
 
-with st.expander("Quản lý hồ sơ đã lưu · dành cho nhóm nghiên cứu"):
-    st.warning("Chỉ mở/xuất dữ liệu trên thiết bị được phép. Thông báo cho người tham gia về mục đích lưu và ai có quyền xem.")
-    if st.button("Xem danh sách hồ sơ đã lưu"):
-        with sqlite3.connect(DB) as c:
-            saved = pd.read_sql_query("SELECT id,created,participant,class_name,total,score100,domains FROM attempts ORDER BY created DESC",c)
-        if saved.empty: st.info("Chưa có hồ sơ nào trên máy chủ này.")
-        else:
-            st.dataframe(saved,use_container_width=True,hide_index=True)
-            st.download_button("Xuất danh sách hồ sơ CSV",saved.to_csv(index=False).encode("utf-8-sig"),
-                               file_name="scorecard_records.csv",mime="text/csv")
-st.caption("Cần giáo viên Toán, Ngữ văn và Tiếng Anh rà soát các tình huống trước khi triển khai chính thức.")
+    st.subheader("Điểm từng câu")
+    st.dataframe(pd.DataFrame(result["detail"]), use_container_width=True, hide_index=True)
+    if st.button("Làm lại bài đánh giá"):
+        st.session_state.pop("result", None)
+        st.rerun()
 
+st.caption("Lưu ý: cần giáo viên Toán, Ngữ văn và Tiếng Anh rà soát các tình huống trước khi triển khai chính thức. Bài làm không được lưu vào cơ sở dữ liệu hay gửi đi đâu; kết quả chỉ giữ tạm trong phiên ứng dụng để hiển thị.")
