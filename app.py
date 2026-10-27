@@ -122,7 +122,7 @@ if "result" in st.session_state:
     st.caption("Điểm quy đổi = tổng điểm / 36 × 100. Đây là chỉ số mô tả kết quả trong bộ tình huống.")
     domain_df = pd.DataFrame([{"Nhóm năng lực":d,"Điểm":v,"Tối đa":9,"Quy đổi (%)":round(v/9*100,1)} for d,v in r["scores"].items()])
     st.subheader("Điểm theo nhóm năng lực")
-    st.bar_chart(domain_df.set_index("Nhóm năng lực")["Quy đổi (%)"], y_min=0, y_max=100)
+    st.bar_chart(domain_df.set_index("Nhóm năng lực")["Quy đổi (%)"])
     st.dataframe(domain_df,use_container_width=True,hide_index=True)
     st.subheader("Lời khuyên cá nhân hóa")
     for d,score in r["scores"].items():
@@ -151,3 +151,4 @@ with st.expander("Quản lý hồ sơ đã lưu · dành cho nhóm nghiên cứu
             st.download_button("Xuất danh sách hồ sơ CSV",saved.to_csv(index=False).encode("utf-8-sig"),
                                file_name="scorecard_records.csv",mime="text/csv")
 st.caption("Cần giáo viên Toán, Ngữ văn và Tiếng Anh rà soát các tình huống trước khi triển khai chính thức.")
+
