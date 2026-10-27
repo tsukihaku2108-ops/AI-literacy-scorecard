@@ -125,4 +125,4 @@ if "result" in st.session_state:
         st.session_state.pop("result", None)
         st.rerun()
 
-st.caption("Lưu ý: cần giáo viên Toán, Ngữ văn và Tiếng Anh rà soát các tình huống trước khi triển khai chính thức. Bài làm không được lưu vào cơ sở dữ liệu hay gửi đi đâu; kết quả chỉ giữ tạm trong phiên ứng dụng để hiển thị.")
+
