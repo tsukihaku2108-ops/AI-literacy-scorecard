@@ -234,8 +234,8 @@ page = st.sidebar.radio(
 
 if page == "Thống kê nghiên cứu":
     show_stats()
-else:
-    with st.form("quiz"):
+        else:
+        with st.form("quiz"):
             selected_class = st.selectbox(
                 "Bạn đang học lớp nào?",
                 options=CLASS_OPTIONS,
@@ -250,21 +250,16 @@ else:
                 st.subheader(f"Câu {i + 1} · {DOMAINS[domain_idx]}")
                 st.write(situation)
 
-            choices.append(st.radio(
-                "Chọn một phương án:",
-                [f"{o[0]}. {o[1]}" for o in options],
-                key=f"q{i}",
-                index=None,
-            ))
-            st.divider()
+                # Giữ nguyên phần radio của câu hỏi tại đây
 
-        go = st.form_submit_button(
-            "Chấm điểm và xem lời khuyên",
-            type="primary",
-            use_container_width=True,
-        )
+            go = st.form_submit_button(
+                "Chấm điểm và xem lời khuyên",
+                type="primary",
+                use_container_width=True,
+            )
 
     if go:
+        # Giữ nguyên phần kiểm tra và chấm điểm hiện tại
     if selected_class is None:
         st.error("Bạn hãy chọn lớp trước khi nộp bài.")
     elif any(choice is None for choice in choices):
