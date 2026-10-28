@@ -244,7 +244,7 @@ else:
             placeholder="Chọn lớp của bạn"
         )
 
-        selected_group = CLASS_GROUPS[selected_class] if selected_class else None
+                selected_group = CLASS_GROUPS[selected_class] if selected_class else None
 
         choices = []
 
