@@ -119,9 +119,9 @@ def save_result(result):
     row = [
         result["attempt_id"],
         result["timestamp"],
-        result["total"],
         result["class_name"],
         result["group_name"],
+        result["total"],
         round(result["total"] / 36 * 100, 1),
     ]
 
