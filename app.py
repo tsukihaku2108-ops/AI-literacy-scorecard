@@ -1,7 +1,18 @@
+
+import json
+import uuid
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import streamlit as st
 import pandas as pd
+import gspread
 
-st.set_page_config(page_title="AI Literacy Scorecard", page_icon="🧭", layout="wide")
+st.set_page_config(
+    page_title="AI Literacy Scorecard",
+    page_icon="🧭",
+    layout="wide"
+)
 
 DOMAINS = [
     "Kỹ năng đặt câu hỏi và khai thác AI",
@@ -9,6 +20,7 @@ DOMAINS = [
     "Kiểm chứng thông tin",
     "Quyền riêng tư và trách nhiệm",
 ]
+
 Q = [
 ("Bạn đang giải phương trình lượng giác nhưng chưa biết cách làm. Bạn muốn dùng AI để hiểu phương pháp.",
  [("A","Nhập đề và yêu cầu AI giải, không cần đọc lời giải.",1),("B","Hỏi AI đáp án của mình đúng không, không đưa cách làm.",2),("C","Yêu cầu đáp án cuối cùng để chép vào vở.",0),("D","Yêu cầu AI giải từng bước và giải thích cách làm.",3)],0),
@@ -35,94 +47,297 @@ Q = [
 ("Bạn dùng AI viết bài nghị luận và định nộp như bài hoàn toàn do mình tự viết.",
  [("A","Nộp nếu không bị phát hiện.",0),("B","Đổi vài từ để giống phong cách cá nhân.",1),("C","Chỉ kiểm tra chính tả trước khi nộp.",2),("D","Tự kiểm tra luận điểm/dẫn chứng, chỉnh sửa bằng hiểu biết, theo quy định giáo viên và chịu trách nhiệm.",3)],3),
 ]
-EXPLANATIONS = [
-"Yêu cầu AI giải thích từng bước giúp bạn hiểu phương pháp thay vì chỉ lấy đáp án.",
-"Yêu cầu giải thích quy tắc và ví dụ giúp bạn hiểu lỗi để tự áp dụng.",
-"Giữ nhận xét của mình và đối chiếu văn bản gốc giúp tránh phụ thuộc vào bài mẫu.",
-"Tự thử trước và dùng AI kiểm tra điểm vướng giúp duy trì tư duy độc lập.",
-"AI nên phản biện dàn ý của bạn, không thay thế quan điểm của bạn.",
-"Bạn cần tự đánh giá lập luận và dẫn chứng, kể cả khi AI góp ý.",
-"AI có thể tạo trích dẫn sai; cần kiểm chứng bằng nguồn độc lập.",
-"Tra định nghĩa và ngữ cảnh giúp chọn nghĩa phù hợp hơn việc đoán hoặc chỉ so sánh máy dịch.",
-"Đối chiếu SGK hoặc nguồn đáng tin cậy tốt hơn việc chỉ hỏi AI xác nhận.",
-"Không nhập dữ liệu nhận dạng không cần thiết; yêu cầu giữ bí mật không bảo đảm an toàn tuyệt đối.",
-"Đổi tên chưa chắc loại bỏ khả năng nhận diện; nên tôn trọng quyền riêng tư.",
-"Người học cần chịu trách nhiệm về bài nộp và tuân thủ quy định sử dụng AI."
-]
+
 ADVICE = {
-DOMAINS[0]: ["Tập nêu mục tiêu, phần đã thử và chỗ chưa hiểu; yêu cầu AI giải thích từng bước thay vì chỉ xin đáp án.",
-"Bạn đã có một số cách hỏi phù hợp. Hãy yêu cầu AI nêu lý do, ví dụ tương tự và giải thích phần chưa hiểu.",
-"Tiếp tục viết prompt rõ mục tiêu, bối cảnh và tiêu chí đầu ra; yêu cầu AI nêu giới hạn và cách tự kiểm tra."],
-DOMAINS[1]: ["Thử tự suy nghĩ/lập dàn ý trước khi mở AI. Dùng AI để phản biện hoặc kiểm tra một bước cụ thể.",
-"Giữ ý tưởng của mình trước khi hỏi AI; sau đó tự đánh giá xem gợi ý có hợp lý không.",
-"Duy trì thói quen tự làm trước, dùng AI để phản biện và giải thích lại kết quả bằng lời của mình."],
-DOMAINS[2]: ["Đối chiếu câu trả lời với SGK, văn bản gốc, từ điển hoặc nguồn đáng tin. AI lặp lại câu trả lời không có nghĩa là câu đó đúng.",
-"Tạo thói quen xác minh dữ kiện quan trọng bằng ít nhất một nguồn độc lập.",
-"Tiếp tục kiểm tra nguồn gốc và ngữ cảnh; ưu tiên nguồn gốc/SGK với công thức và trích dẫn."],
-DOMAINS[3]: ["Tránh nhập dữ liệu cá nhân không cần thiết; kiểm tra quy định của giáo viên và chịu trách nhiệm với bài nộp.",
-"Giảm thông tin nhận dạng khi nhập prompt, tôn trọng quyền riêng tư và kiểm tra quy định học tập.",
-"Duy trì nguyên tắc tối thiểu hóa dữ liệu, tôn trọng quyền riêng tư và tuân thủ quy định sử dụng AI."]
+    DOMAINS[0]: [
+        "Tập nêu mục tiêu, phần đã thử và chỗ chưa hiểu; yêu cầu AI giải thích từng bước thay vì chỉ xin đáp án.",
+        "Bạn đã có một số cách hỏi phù hợp. Hãy yêu cầu AI nêu lý do, ví dụ tương tự và giải thích phần chưa hiểu.",
+        "Tiếp tục viết prompt rõ mục tiêu, bối cảnh và tiêu chí đầu ra; yêu cầu AI nêu giới hạn và cách tự kiểm tra."
+    ],
+    DOMAINS[1]: [
+        "Thử tự suy nghĩ/lập dàn ý trước khi mở AI. Dùng AI để phản biện hoặc kiểm tra một bước cụ thể.",
+        "Giữ ý tưởng của mình trước khi hỏi AI; sau đó tự đánh giá xem gợi ý có hợp lý không.",
+        "Duy trì thói quen tự làm trước, dùng AI để phản biện và giải thích lại kết quả bằng lời của mình."
+    ],
+    DOMAINS[2]: [
+        "Đối chiếu câu trả lời với SGK, văn bản gốc, từ điển hoặc nguồn đáng tin. AI lặp lại câu trả lời không có nghĩa là câu đó đúng.",
+        "Tạo thói quen xác minh dữ kiện quan trọng bằng ít nhất một nguồn độc lập.",
+        "Tiếp tục kiểm tra nguồn gốc và ngữ cảnh; ưu tiên nguồn gốc/SGK với công thức và trích dẫn."
+    ],
+    DOMAINS[3]: [
+        "Tránh nhập dữ liệu cá nhân không cần thiết; kiểm tra quy định của giáo viên và chịu trách nhiệm với bài nộp.",
+        "Giảm thông tin nhận dạng khi nhập prompt, tôn trọng quyền riêng tư và kiểm tra quy định học tập.",
+        "Duy trì nguyên tắc tối thiểu hóa dữ liệu, tôn trọng quyền riêng tư và tuân thủ quy định sử dụng AI."
+    ]
 }
-st.set_page_config(page_title="AI Literacy Scorecard", page_icon="🧭", layout="wide")
+
+
+def connect_sheet():
+    config = st.secrets["google"]
+    credentials = json.loads(config["service_account_json"])
+    client = gspread.service_account_from_dict(credentials)
+    spreadsheet = client.open_by_key(config["spreadsheet_id"])
+
+    try:
+        worksheet = spreadsheet.worksheet("results")
+    except gspread.WorksheetNotFound:
+        worksheet = spreadsheet.add_worksheet(
+            title="results", rows=1000, cols=40
+        )
+
+    headers = [
+        "Mã lượt làm", "Thời gian",
+        "Tổng điểm /36", "Điểm quy đổi /100"
+    ]
+    headers += [f"{domain} /9" for domain in DOMAINS]
+
+    for i in range(1, 13):
+        headers += [f"Câu {i} - lựa chọn", f"Câu {i} - điểm"]
+
+    if not worksheet.row_values(1):
+        worksheet.append_row(headers)
+
+    return worksheet
+
+
+def save_result(result):
+    worksheet = connect_sheet()
+
+    row = [
+        result["attempt_id"],
+        result["timestamp"],
+        result["total"],
+        round(result["total"] / 36 * 100, 1),
+    ]
+
+    row += [result["scores"][domain] for domain in DOMAINS]
+
+    for item in result["detail"]:
+        row += [item["Lựa chọn"], item["Điểm"]]
+
+    worksheet.append_row(row, value_input_option="USER_ENTERED")
+
+
+def show_stats():
+    st.title("📊 Thống kê nghiên cứu")
+
+    if "stats_authenticated" not in st.session_state:
+        st.session_state["stats_authenticated"] = False
+
+    if not st.session_state["stats_authenticated"]:
+        with st.form("stats_login"):
+            password = st.text_input("Mật khẩu quản trị", type="password")
+            login = st.form_submit_button("Đăng nhập")
+
+        if login:
+            if password == st.secrets["admin"]["stats_password"]:
+                st.session_state["stats_authenticated"] = True
+                st.rerun()
+            else:
+                st.error("Mật khẩu chưa đúng.")
+
+        return
+
+    if st.button("Đăng xuất trang thống kê"):
+        st.session_state["stats_authenticated"] = False
+        st.rerun()
+
+    try:
+        worksheet = connect_sheet()
+        records = worksheet.get_all_records()
+        if not records:
+            st.info("Chưa có lượt làm nào được lưu.")
+            return
+
+        df = pd.DataFrame(records)
+        df["Tổng điểm /36"] = pd.to_numeric(
+            df["Tổng điểm /36"], errors="coerce"
+        )
+        df["Điểm quy đổi /100"] = pd.to_numeric(
+            df["Điểm quy đổi /100"], errors="coerce"
+        )
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Tổng lượt làm", len(df))
+        c2.metric("Điểm trung bình /36",
+                  f"{df['Tổng điểm /36'].mean():.2f}")
+        c3.metric("Trung vị /36",
+                  f"{df['Tổng điểm /36'].median():.2f}")
+
+        st.subheader("Phân bố tổng điểm")
+        st.bar_chart(df["Tổng điểm /36"].value_counts().sort_index())
+
+        st.subheader("Điểm trung bình theo nhóm năng lực")
+        domain_columns = [f"{domain} /9" for domain in DOMAINS]
+        domain_means = df[domain_columns].apply(
+            pd.to_numeric, errors="coerce"
+        ).mean()
+        domain_means.index = DOMAINS
+        st.bar_chart(domain_means)
+
+        st.subheader("Tần suất lựa chọn từng câu")
+        for i in range(1, 13):
+            column = f"Câu {i} - lựa chọn"
+            st.write(f"**Câu {i}**")
+            st.bar_chart(df[column].value_counts().reindex(
+                ["A", "B", "C", "D"], fill_value=0
+            ))
+
+        st.subheader("Dữ liệu đã lưu")
+        st.dataframe(df, use_container_width=True, hide_index=True)
+
+        st.download_button(
+            "Tải dữ liệu CSV",
+            data=df.to_csv(index=False).encode("utf-8-sig"),
+            file_name="ai_literacy_results.csv",
+            mime="text/csv",
+        )
+
+        st.caption(
+            "Đây là số lượt làm, không đồng nghĩa số học sinh duy nhất. "
+            "Không thu thập họ tên, email hoặc số điện thoại."
+        )
+
+    except Exception:
+        st.error(
+            "Không đọc được dữ liệu. Hãy kiểm tra cấu hình Secrets, "
+            "quyền Editor của service account và sheet results."
+        )
+
 
 st.title("🧭 AI Literacy Scorecard")
 st.write("Bộ 12 tình huống thực tế về cách sử dụng AI trong học tập.")
-st.info("Đây là công cụ tự đánh giá thử nghiệm, chưa phải thang đo đã được kiểm định. Hãy chọn phương án gần với cách bạn thực sự sẽ làm.")
+st.info(
+    "Đây là công cụ tự đánh giá thử nghiệm, chưa phải thang đo đã được "
+    "kiểm định. Hãy chọn phương án gần với cách bạn thực sự sẽ làm."
+)
 
-with st.form("quiz"):
-    choices = []
-    for i, (situation, options, domain_idx) in enumerate(Q):
-        st.subheader(f"Câu {i + 1} · {DOMAINS[domain_idx]}")
-        st.write(situation)
-        choices.append(st.radio(
-            "Chọn một phương án:",
-            [f"{o[0]}. {o[1]}" for o in options],
-            key=f"q{i}",
-            index=None,
-        ))
-        st.divider()
-    go = st.form_submit_button("Chấm điểm và xem lời khuyên", type="primary", use_container_width=True)
+page = st.sidebar.radio(
+    "Chọn trang",
+    ["Làm bài đánh giá", "Thống kê nghiên cứu"]
+)
 
-if go:
-    if any(choice is None for choice in choices):
-        st.error("Bạn cần trả lời đủ 12 tình huống trước khi chấm điểm.")
-    else:
-        scores = {domain: 0 for domain in DOMAINS}
-        detail = []
-        for i, ((situation, options, domain_idx), chosen) in enumerate(zip(Q, choices)):
-            option = next(option for option in options if chosen.startswith(option[0] + "."))
-            letter, label, score = option
-            domain = DOMAINS[domain_idx]
-            scores[domain] += score
-            detail.append({"Câu": i + 1, "Nhóm năng lực": domain, "Lựa chọn": letter, "Điểm": score})
-        st.session_state["result"] = {"scores": scores, "total": sum(scores.values()), "detail": detail}
+if page == "Thống kê nghiên cứu":
+    show_stats()
 
-if "result" in st.session_state:
-    result = st.session_state["result"]
-    st.header("Kết quả của bạn")
-    col1, col2 = st.columns(2)
-    col1.metric("Tổng điểm", f"{result['total']}/36")
-    col2.metric("Điểm quy đổi", f"{result['total'] / 36 * 100:.1f}/100")
-    st.caption("Điểm quy đổi = tổng điểm / 36 × 100. Chỉ số này mô tả kết quả trong bộ tình huống, không phải đánh giá năng lực đã được kiểm định.")
+else:
+    with st.form("quiz"):
+        choices = []
 
-    domain_df = pd.DataFrame([
-        {"Nhóm năng lực": domain, "Điểm": score, "Tối đa": 9, "Quy đổi (%)": round(score / 9 * 100, 1)}
-        for domain, score in result["scores"].items()
-    ])
-    st.subheader("Điểm theo nhóm năng lực")
-    st.bar_chart(domain_df.set_index("Nhóm năng lực")["Quy đổi (%)"])
-    st.dataframe(domain_df, use_container_width=True, hide_index=True)
+        for i, (situation, options, domain_idx) in enumerate(Q):
+            st.subheader(f"Câu {i + 1} · {DOMAINS[domain_idx]}")
+            st.write(situation)
 
-    st.subheader("Lời khuyên dựa trên điểm từng nhóm")
-    for domain, score in result["scores"].items():
-        band = 0 if score <= 3 else (1 if score <= 6 else 2)
-        with st.expander(f"{domain}: {score}/9", expanded=(score <= 3)):
-            st.write(ADVICE[domain][band])
+            choices.append(st.radio(
+                "Chọn một phương án:",
+                [f"{o[0]}. {o[1]}" for o in options],
+                key=f"q{i}",
+                index=None,
+            ))
+            st.divider()
 
-    st.subheader("Điểm từng câu")
-    st.dataframe(pd.DataFrame(result["detail"]), use_container_width=True, hide_index=True)
-    if st.button("Làm lại bài đánh giá"):
-        st.session_state.pop("result", None)
-        st.rerun()
+        go = st.form_submit_button(
+            "Chấm điểm và xem lời khuyên",
+            type="primary",
+            use_container_width=True,
+        )
 
+    if go:
+        if any(choice is None for choice in choices):
+            st.error("Bạn cần trả lời đủ 12 tình huống trước khi chấm điểm.")
+        else:
+            scores = {domain: 0 for domain in DOMAINS}
+            detail = []
 
+            for i, ((situation, options, domain_idx), chosen) in enumerate(
+                zip(Q, choices)
+            ):
+                option = next(
+                    option for option in options
+                    if chosen.startswith(option[0] + ".")
+                )
+                letter, label, score = option
+                domain = DOMAINS[domain_idx]
+                scores[domain] += score
+
+                detail.append({
+                    "Câu": i + 1,
+                    "Nhóm năng lực": domain,
+                    "Lựa chọn": letter,
+                    "Điểm": score,
+                })
+
+            result = {
+                "attempt_id": str(uuid.uuid4()),
+                "timestamp": datetime.now(
+                    ZoneInfo("Asia/Ho_Chi_Minh")
+                ).isoformat(timespec="seconds"),
+                "scores": scores,
+                "total": sum(scores.values()),
+                "detail": detail,
+            }
+
+            st.session_state["result"] = result
+
+            try:
+                save_result(result)
+                st.session_state["saved_attempt_id"] = result["attempt_id"]
+                st.success("Kết quả đã được lưu vào hệ thống.")
+            except Exception:
+                st.error(
+                    "Chưa lưu được kết quả. Hãy báo người quản trị kiểm tra "
+                    "Secrets và quyền truy cập Google Sheets."
+                )
+
+    if "result" in st.session_state:
+        result = st.session_state["result"]
+
+        col1, col2 = st.columns(2)
+        col1.metric("Tổng điểm", f"{result['total']}/36")
+        col2.metric(
+            "Điểm quy đổi",
+            f"{result['total'] / 36 * 100:.1f}/100"
+        )
+
+        st.caption(
+            "Điểm quy đổi = tổng điểm / 36 × 100. "
+            "Đây không phải đánh giá năng lực đã được kiểm định."
+        )
+
+        domain_df = pd.DataFrame([
+            {
+                "Nhóm năng lực": domain,
+                "Điểm": score,
+                "Tối đa": 9,
+                "Quy đổi (%)": round(score / 9 * 100, 1),
+            }
+            for domain, score in result["scores"].items()
+        ])
+
+        st.subheader("Điểm theo nhóm năng lực")
+        st.bar_chart(
+            domain_df.set_index("Nhóm năng lực")["Quy đổi (%)"]
+        )
+        st.dataframe(domain_df, use_container_width=True, hide_index=True)
+
+        st.subheader("Lời khuyên dựa trên điểm từng nhóm")
+        for domain, score in result["scores"].items():
+            band = 0 if score <= 3 else (1 if score <= 6 else 2)
+            with st.expander(f"{domain}: {score}/9", expanded=(score <= 3)):
+                st.write(ADVICE[domain][band])
+
+        st.subheader("Điểm từng câu")
+        st.dataframe(
+            pd.DataFrame(result["detail"]),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        if st.button("Làm lại bài đánh giá"):
+            st.session_state.pop("result", None)
+            st.rerun()
+
+st.caption(
+    "Kết quả được lưu vào Google Sheets để phục vụ thống kê nghiên cứu. "
+    "Không nhập thông tin nhận dạng cá nhân vào bài đánh giá."
+)
