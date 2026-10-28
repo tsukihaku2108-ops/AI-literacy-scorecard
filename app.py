@@ -235,22 +235,18 @@ page = st.sidebar.radio(
 if page == "Thống kê nghiên cứu":
     show_stats()
 
-else:
-    with st.form("quiz"):
-                selected_class = st.selectbox(
-            "Bạn đang học lớp nào?",
-            options=CLASS_OPTIONS,
-            index=None,
-            placeholder="Chọn lớp của bạn"
-        )
+  else:
+        with st.form("quiz"):
+            selected_class = st.selectbox(
+                ...
+            )
 
-                selected_group = CLASS_GROUPS[selected_class] if selected_class else None
+            selected_group = CLASS_GROUPS[selected_class] if selected_class else None
 
-                choices = []
-
-        for i, (situation, options, domain_idx) in enumerate(Q):
-            st.subheader(f"Câu {i + 1} · {DOMAINS[domain_idx]}")
-            st.write(situation)
+            choices = []
+            for i, (situation, options, domain_idx) in enumerate(Q):
+                st.subheader(f"Câu {i + 1} · {DOMAINS[domain_idx]}")
+                st.write(situation)
 
             choices.append(st.radio(
                 "Chọn một phương án:",
