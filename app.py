@@ -234,6 +234,15 @@ if page == "Thống kê nghiên cứu":
 
 else:
     with st.form("quiz"):
+                selected_class = st.selectbox(
+            "Bạn đang học lớp nào?",
+            options=CLASS_OPTIONS,
+            index=None,
+            placeholder="Chọn lớp của bạn"
+        )
+
+        selected_group = CLASS_GROUPS[selected_class] if selected_class else None
+
         choices = []
 
         for i, (situation, options, domain_idx) in enumerate(Q):
@@ -255,8 +264,10 @@ else:
         )
 
     if go:
-        if any(choice is None for choice in choices):
-            st.error("Bạn cần trả lời đủ 12 tình huống trước khi chấm điểm.")
+    if selected_class is None:
+        st.error("Bạn hãy chọn lớp trước khi nộp bài.")
+    elif any(choice is None for choice in choices):
+        st.error("Bạn hãy trả lời đầy đủ 12 câu hỏi.")
         else:
             scores = {domain: 0 for domain in DOMAINS}
             detail = []
@@ -280,13 +291,14 @@ else:
                 })
 
             result = {
-                "attempt_id": str(uuid.uuid4()),
-                "timestamp": datetime.now(
-                    ZoneInfo("Asia/Ho_Chi_Minh")
-                ).isoformat(timespec="seconds"),
-                "scores": scores,
-                "total": sum(scores.values()),
-                "detail": detail,
+                 "attempt_id": str(uuid.uuid4()),
+                 "timestamp": datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).isoformat(timespec="seconds"),
+                 "class_name": selected_class,
+                 "group_name": selected_group,
+                 "scores": scores,
+                 "total": sum(scores.values()),
+                 "detail": detail
+
             }
 
             st.session_state["result"] = result
