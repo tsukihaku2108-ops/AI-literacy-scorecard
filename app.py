@@ -98,7 +98,8 @@ def connect_sheet():
         )
 
     headers = [
-        "Mã lượt làm", "Thời gian",
+        "Mã lượt làm", "Thời gian","Lớp",
+    "Nhóm nghiên cứu",
         "Tổng điểm /36", "Điểm quy đổi /100"
     ]
     headers += [f"{domain} /9" for domain in DOMAINS]
@@ -119,6 +120,8 @@ def save_result(result):
         result["attempt_id"],
         result["timestamp"],
         result["total"],
+        result["class_name"],
+        result["group_name"],
         round(result["total"] / 36 * 100, 1),
     ]
 
