@@ -234,9 +234,8 @@ page = st.sidebar.radio(
 
 if page == "Thống kê nghiên cứu":
     show_stats()
-
-    else:
-        with st.form("quiz"):
+else:
+    with st.form("quiz"):
             selected_class = st.selectbox(
                 "Bạn đang học lớp nào?",
                 options=CLASS_OPTIONS,
