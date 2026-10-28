@@ -246,7 +246,7 @@ else:
 
                 selected_group = CLASS_GROUPS[selected_class] if selected_class else None
 
-        choices = []
+                choices = []
 
         for i, (situation, options, domain_idx) in enumerate(Q):
             st.subheader(f"Câu {i + 1} · {DOMAINS[domain_idx]}")
