@@ -13,7 +13,19 @@ st.set_page_config(
     page_icon="🧭",
     layout="wide"
 )
+# Phân nhóm lớp trong nghiên cứu
+CLASS_GROUPS = {
+    "11V": "Thực nghiệm",
+    "11ĐS": "Thực nghiệm",
+    "11L": "Thực nghiệm",
+    "11T2": "Thực nghiệm",
+    "11SiTi": "Đối chứng",
+    "11H": "Đối chứng",
+    "11T1": "Đối chứng",
+    "11A": "Đối chứng",
+}
 
+CLASS_OPTIONS = list(CLASS_GROUPS.keys())
 DOMAINS = [
     "Kỹ năng đặt câu hỏi và khai thác AI",
     "Tư duy độc lập",
