@@ -269,21 +269,12 @@ else:
             use_container_width=True,
         )
 
+    
     if go:
         if selected_class is None:
             st.error("Bạn hãy chọn lớp trước khi nộp bài.")
         elif any(choice is None for choice in choices):
             st.error("Bạn hãy trả lời đầy đủ 12 câu hỏi.")
-        else:
-            # Giữ nguyên phần tính điểm, tạo result và save_result
-            # đang có ở phía dưới của code cũ.
-            pass
-
-        # Giữ nguyên phần kiểm tra và chấm điểm hiện tại
-    if selected_class is None:
-        st.error("Bạn hãy chọn lớp trước khi nộp bài.")
-    elif any(choice is None for choice in choices):
-        st.error("Bạn hãy trả lời đầy đủ 12 câu hỏi.")
         else:
             scores = {domain: 0 for domain in DOMAINS}
             detail = []
@@ -307,14 +298,15 @@ else:
                 })
 
             result = {
-                 "attempt_id": str(uuid.uuid4()),
-                 "timestamp": datetime.now(ZoneInfo("Asia/Ho_Chi_Minh")).isoformat(timespec="seconds"),
-                 "class_name": selected_class,
-                 "group_name": selected_group,
-                 "scores": scores,
-                 "total": sum(scores.values()),
-                 "detail": detail
-
+                "attempt_id": str(uuid.uuid4()),
+                "timestamp": datetime.now(
+                    ZoneInfo("Asia/Ho_Chi_Minh")
+                ).isoformat(timespec="seconds"),
+                "class_name": selected_class,
+                "group_name": selected_group,
+                "scores": scores,
+                "total": sum(scores.values()),
+                "detail": detail,
             }
 
             st.session_state["result"] = result
